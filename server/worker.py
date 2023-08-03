@@ -2,17 +2,20 @@ import logging
 import multiprocessing
 from multiprocessing import Process, Pipe
 import enum
+import asyncio
 
+from PIL import Image
 import torch
 
 import config
 import utils
 
+
 ##### DEBUG SECTION START #####
 DEBUGGING = __name__ == "__main__" or __name__ == "__mp_main__"
+DEBUGGING = False
 if DEBUGGING:
     from time import sleep
-    import asyncio
     from random import random
 
 if not DEBUGGING:
@@ -90,6 +93,7 @@ def _worker_func(pipe, name: str, device_name: str):
 
 class Worker:
     def __init__(self, name: str, device: str):
+        multiprocessing.set_start_method("spawn", True)
         self._pipe, _proc_pipe = Pipe()
         _proc = Process(target=_worker_func, args=(_proc_pipe, name, device), name=name)
         _proc.start()
@@ -181,9 +185,12 @@ if __name__ == '__main__':
 
     pool = WorkerPool()
 
-    for i in range(30):
+    for i in range(17):
+        path = f"../img_prompt/{i+1:02d}/"
+        prompt = open(path + "prompt.txt").read().strip()
+        image = Image.open(path + "img.jpg").convert("RGB")
         pool.submit(Work(
-            None, f"test {i} prompt", None, {"max_length": 100}
+            None, prompt, image, {}
         ))
 
     async def test():

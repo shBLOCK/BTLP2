@@ -1,5 +1,6 @@
 import enum
 
+from PIL import Image
 import torch
 from lavis.models import load_model_and_preprocess
 
@@ -7,15 +8,17 @@ import config
 
 
 class Model:
-    def __init__(self, main, vis_proc, txt_proc):
+    def __init__(self, main, vis_proc, txt_proc, device, _v):
         self.main = main
         self.vis_proc = vis_proc
         self.txt_proc = txt_proc
+        self.device = device
+        self._v = _v
 
     def generate(
             self,
             prompt: str,
-            image: torch.Tensor,
+            raw_image: Image,
             use_nucleus_sampling=False,
             num_beams=5,
             max_length=30,
@@ -29,7 +32,7 @@ class Model:
         """
         Args:
             prompt (str): The prompt text
-            image (torch.Tensor): A tensor of shape (batch_size, 3, H, W)
+            image (torch.Tensor): TODO
             use_nucleus_sampling (bool): Whether to use nucleus sampling. If False, use top-k sampling.
             num_beams (int): Number of beams for beam search. 1 means no beam search.
             max_length (int): The maximum length of the sequence to be generated.
@@ -40,6 +43,9 @@ class Model:
         Returns:
             captions (list): A list of strings of length batch_size * num_captions.
         """
+        yield "vis process"
+        image = self.vis_proc(raw_image).unsqueeze(0).to(self.device)
+        
         with self.main.maybe_autocast(), torch.no_grad():
             image_embeds = self.main.ln_vision(self.main.visual_encoder(image))
             image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(
@@ -72,9 +78,9 @@ class Model:
             inputs_embeds = self.main.opt_model.get_input_embeddings()(opt_tokens.input_ids)
             inputs_embeds = torch.cat([inputs_opt, inputs_embeds], dim=1)
 
-            yield "opt_model.generate"
+            # yield "opt_model.generate"
             outputs = self.main.opt_model.generate(
-                inputs_embeds=inputs_embeds,
+                inputs_embeds=inputs_embeds, 
                 attention_mask=attention_mask,
                 do_sample=use_nucleus_sampling,
                 top_p=top_p,
@@ -88,7 +94,7 @@ class Model:
                 num_return_sequences=num_captions,
             )
 
-            yield "opt_tokenizer.batch_decode"
+            # yield "opt_tokenizer.batch_decode"
             output_text = self.main.opt_tokenizer.batch_decode(
                 outputs, skip_special_tokens=True
             )
@@ -105,5 +111,4 @@ def load_model(device) -> Model:
         device=device
     )
     vis_processor = _vis_processors["eval"]
-    txt_processor = _txt_processors["eval"]
-    return Model(model, vis_processor, txt_processor)
+    return Model(model, vis_processor, None, device, _vis_processors)
