@@ -4,6 +4,7 @@ from multiprocessing import Process, Pipe
 import enum
 import asyncio
 
+import PIL
 from PIL import Image
 import torch
 
@@ -12,7 +13,6 @@ import utils
 
 
 ##### DEBUG SECTION START #####
-DEBUGGING = __name__ == "__main__" or __name__ == "__mp_main__"
 DEBUGGING = False
 if DEBUGGING:
     from time import sleep
@@ -76,7 +76,7 @@ def _worker_func(pipe, name: str, device_name: str):
         pipe.send((MsgType.PENDING, None))
         work = pipe.recv()
 
-        logger.info(f"Starting generation {gen_cnt}...\nPrompt: {work.prompt}\nImage: {work.image}\nArgs: {work.args}")
+        logger.info(f"Starting generation {gen_cnt}...\nPrompt: {work.prompt}\nImage(size): {work.image.size}\nArgs: {work.args}")
 
         generator = model.generate(work.prompt, work.image, **work.args)
         while True:
@@ -92,7 +92,11 @@ def _worker_func(pipe, name: str, device_name: str):
 
 
 class Worker:
-    def __init__(self, name: str, device: str):
+    def __init__(self, pool: "WorkerPool", name: str, device: str, progress_callback, result_callback):
+        self.pool = pool
+        self._progress_callback = progress_callback
+        self._result_callback = result_callback
+
         multiprocessing.set_start_method("spawn", True)
         self._pipe, _proc_pipe = Pipe()
         _proc = Process(target=_worker_func, args=(_proc_pipe, name, device), name=name)
@@ -101,19 +105,21 @@ class Worker:
 
         self._initializing = True
         self._busy = True
+        self._work = None
 
     @property
     def busy(self):
         return self._busy
 
-    def submit(self, work):
-        self.update()
+    async def submit(self, work):
+        await self.update()
         assert not self.busy, "This worker is still busy."
 
         self._pipe.send(work)
         self._busy = True
+        self._work = work
 
-    def update(self):
+    async def update(self):
         """
         Call this method regularly!
         """
@@ -122,56 +128,74 @@ class Worker:
             if msg == MsgType.PENDING:
                 self._busy = False
             elif msg == MsgType.PROGRESS:
-                pass
+                await self._progress_callback(self, self._work, data)
             elif msg == MsgType.RESULT:
-                pass
+                await self._result_callback(self, self._work, data)
             else:
                 assert False
 
 
 class Work:
-    def __init__(self, client, prompt, image, args):
+    def __init__(self, client, request_id: int, prompt: str, image: PIL.Image, args: dict):
         self.client = client
+        self.request_id = request_id
 
         self.prompt = prompt
         self.image = image
         self.args = args
+    
+    def __getstate__(self):
+        return {
+            "request_id": self.request_id,
+            "prompt": self.prompt,
+            "image": self.image,
+            "args": self.args
+        }
 
 
 class WorkerPool:
-    def __init__(self):
+    def __init__(self, queue_update_callback, progress_callback, result_callback):
         self._workers = []
 
         for i, device_name in enumerate(config.WORKERS):
             self._workers.append(Worker(
+                self,
                 f"Worker {i}",
-                device_name
+                device_name,
+                progress_callback,
+                result_callback
             ))
 
         self._work_queue = []
 
-    @property
-    def queue_length(self):
-        return len(self._work_queue)
+        self._queue_update_callback = queue_update_callback
 
-    def submit(self, work: Work):
+    @property
+    def queue(self):
+        return tuple(self._work_queue)
+
+    async def submit(self, work: Work):
         self._work_queue.append(work)
+        await self._queue_update_callback(self.queue)
 
     def on_client_disconnect(self, client):
         self._work_queue = [w for w in self._work_queue if w.client == client]
 
-    def update(self):
+    async def update(self):
         """
         Call this regularly!
         """
 
         for w in self._workers:
-            w.update()
+            await w.update()
 
         while len(self._work_queue) > 0:
             for w in self._workers:
                 if not w.busy:
-                    w.submit(self._work_queue.pop(0))
+                    work = self._work_queue.pop(0)
+                    print(work, work.client, work.request_id, work.prompt, work.image, work.args)
+                    await w.submit(work)
+                    await self._queue_update_callback(self.queue)
                     break
             else:
                 break
@@ -181,17 +205,32 @@ if __name__ == '__main__':
     utils.configure_logger(logging.getLogger())
     logging.basicConfig()
 
-    logging.getLogger().info("test")
+    def on_queue_update(queue):
+        logging.warning(f"Queue update: {len(queue)}")
 
-    pool = WorkerPool()
+    def on_progress(worker, work, progress):
+        logging.warning(f"Progress: {work} {progress}")
+
+    def on_result(worker, work, result):
+        logging.warning(f"Progress: {work} {result}")
+
+    pool = WorkerPool(on_queue_update, on_progress, on_result)
 
     for i in range(17):
         path = f"../img_prompt/{i+1:02d}/"
         prompt = open(path + "prompt.txt").read().strip()
         image = Image.open(path + "img.jpg").convert("RGB")
+        image = path + "img.jpg"
         pool.submit(Work(
-            None, prompt, image, {}
+            None, 1, prompt, image, {}
         ))
+
+    # for i in range(17):
+    #     prompt = f"prompt {i}"
+    #     image = None
+    #     pool.submit(Work(
+    #         None, 1, prompt, image, {}
+    #     ))
 
     async def test():
         while True:

@@ -2,7 +2,8 @@ from torch import device
 
 
 WORKERS = (
-    *(f"cuda:{i}" for i in range(4, 7)),
+    *(f"cuda:{i}" for i in range(0, 9)),
+    # "cpu",
 )
 
 MODEL_NAME = "blip2_opt"

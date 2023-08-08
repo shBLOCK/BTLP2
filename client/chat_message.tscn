@@ -1,6 +1,27 @@
-[gd_scene load_steps=2 format=3 uid="uid://kgr2ov5xsk6j"]
+[gd_scene load_steps=4 format=3 uid="uid://kgr2ov5xsk6j"]
 
 [ext_resource type="Script" path="res://chat_message.gd" id="1_bryqk"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pfnsk"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.203922, 0.203922, 0.203922, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qfsnx"]
+content_margin_left = 5.0
+content_margin_top = 5.0
+content_margin_right = 5.0
+content_margin_bottom = 5.0
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
 
 [node name="ChatMessage" type="PanelContainer"]
 anchors_preset = 15
@@ -8,4 +29,58 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_pfnsk")
 script = ExtResource("1_bryqk")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="PromptContainer" type="HSplitContainer" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Image" type="TextureRect" parent="VBoxContainer/PromptContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+stretch_mode = 5
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Response" type="Label" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+autowrap_mode = 3
+
+[node name="Progress" type="Control" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ProgressBar" type="ProgressBar" parent="VBoxContainer/Progress"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/fill = SubResource("StyleBoxFlat_qfsnx")
+max_value = 1.0
+step = 0.0
+allow_greater = true
+allow_lesser = true
+show_percentage = false
+
+[node name="ProgressLabel" type="Label" parent="VBoxContainer/Progress"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2

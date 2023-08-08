@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://dl7s1fvhvhpma"]
+
+[ext_resource type="Texture2D" uid="uid://c7qme2kpnadsp" path="res://assets/upload_image.svg" id="1_nvix8"]
+[ext_resource type="Script" path="res://image_upload_area.gd" id="1_rm5gu"]
+
+[node name="ImageUploadArea" type="TextureButton"]
+offset_right = 40.0
+offset_bottom = 40.0
+texture_normal = ExtResource("1_nvix8")
+ignore_texture_size = true
+stretch_mode = 5
+script = ExtResource("1_rm5gu")
+
+[connection signal="pressed" from="." to="." method="_on_pressed"]

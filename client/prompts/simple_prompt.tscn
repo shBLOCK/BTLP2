@@ -1,10 +1,10 @@
 [gd_scene load_steps=3 format=3 uid="uid://ja8hcsfr42nf"]
 
-[ext_resource type="Script" path="res://simple_prompt.gd" id="1_5lggm"]
 [ext_resource type="PackedScene" uid="uid://d3fcmovrn4f8p" path="res://prompts/prompt.tscn" id="1_ktw30"]
+[ext_resource type="Script" path="res://prompts/simple_prompt.gd" id="2_sfxuy"]
 
 [node name="SimplePrompt" instance=ExtResource("1_ktw30")]
-script = ExtResource("1_5lggm")
+script = ExtResource("2_sfxuy")
 
 [node name="TextEdit" type="TextEdit" parent="." index="0"]
 unique_name_in_owner = true

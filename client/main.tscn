@@ -24,28 +24,54 @@ text = "BLIP2 Client"
 label_settings = SubResource("LabelSettings_yh41w")
 horizontal_alignment = 1
 
+[node name="NetworkProgressBar" type="ProgressBar" parent="VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 
-[node name="HistoryPanel" type="PanelContainer" parent="VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/HistoryPanel"]
+[node name="VSplitContainer" type="VSplitContainer" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="ChatMessageContainer" type="VBoxContainer" parent="VBoxContainer/HistoryPanel/ScrollContainer"]
+[node name="HistoryPanel" type="PanelContainer" parent="VBoxContainer/VSplitContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/VSplitContainer/HistoryPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 2
+
+[node name="ChatMessageContainer" type="VBoxContainer" parent="VBoxContainer/VSplitContainer/HistoryPanel/ScrollContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_constants/separation = 10
 
-[node name="BottomPanel" type="PanelContainer" parent="VBoxContainer"]
+[node name="BottomPanel" type="PanelContainer" parent="VBoxContainer/VSplitContainer"]
 layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.4
 
-[node name="SendPanel" parent="VBoxContainer/BottomPanel" instance=ExtResource("1_ak4rm")]
+[node name="SendPanel" parent="VBoxContainer/VSplitContainer/BottomPanel" instance=ExtResource("1_ak4rm")]
 unique_name_in_owner = true
 layout_mode = 2
 
 [node name="WebSocketClient" parent="." instance=ExtResource("3_o7pra")]
+
+[node name="Notifications" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 0
+theme_override_constants/separation = 5
+
+[connection signal="submit" from="VBoxContainer/VSplitContainer/BottomPanel/SendPanel" to="." method="_on_send_panel_submit"]
+[connection signal="data_sent" from="WebSocketClient" to="." method="_on_data_sent"]
+[connection signal="on_server_packet" from="WebSocketClient" to="." method="_on_server_packet"]
